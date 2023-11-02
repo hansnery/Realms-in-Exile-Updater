@@ -1,4 +1,5 @@
 import os
+import sys
 import requests
 from tqdm import tqdm
 import zipfile
@@ -6,6 +7,14 @@ import zipfile
 BASE_URL = "https://storage.googleapis.com/realms-in-exile/updater/"
 VERSION_FILE = "version.txt"
 MOD_FILE = "files.zip"
+
+# Check if running as a PyInstaller bundle
+if getattr(sys, 'frozen', False):
+    # If bundle, set the base directory to the executable's directory
+    base_dir = sys._MEIPASS
+else:
+    # Otherwise, use the script's directory
+    base_dir = os.path.dirname(os.path.abspath(__file__))
 
 def download_file(filename):
     file_path = os.path.join(script_directory, filename)
@@ -39,18 +48,23 @@ def get_online_version():
         response.raise_for_status()  # This will raise an error for 4xx and 5xx status codes
         return response.text.strip()
     except requests.RequestException as e:
-        print(f"Error fetching online version: {e}")
+        print(f"Error fetching online version: {e}\n")
         return None
 
 def cleanup_and_retry():
     os.remove(os.path.join(script_directory, MOD_FILE))
-    choice = input("An error occurred. Would you like to start over? (Y/N): ").upper()
+    choice = input("An error occurred. Would you like to start over? (Y/N): \n").upper()
     if choice == 'Y':
         main()
 
 def main():
     global script_directory
-    script_directory = os.path.dirname(os.path.abspath(__file__))
+    if getattr(sys, 'frozen', False):
+        # If the script is run from a bundled executable, use the executable's directory
+        script_directory = os.path.dirname(sys.executable)
+    else:
+        # Otherwise, use the script's directory
+        script_directory = os.path.dirname(os.path.abspath(__file__))
 
     try:
         local_version = get_local_version() if os.path.exists(os.path.join(script_directory, VERSION_FILE)) else None
@@ -60,13 +74,14 @@ def main():
             if online_version is None:
                 print("Unable to check for updates at this time.")
                 return
-            print(f"'Age of the Ring: Realms in Exile' is not installed. Installing version {online_version}...")
+            print(f"'Age of the Ring: Realms in Exile' is not installed.\n")
+            print(f"Installing version {online_version} in: {script_directory}\n")
             download_file(VERSION_FILE)
             download_file(MOD_FILE)
             print("Installing files...")
             extract_with_progress(os.path.join(script_directory, MOD_FILE), script_directory)
             os.remove(os.path.join(script_directory, MOD_FILE))
-            print(f"'Age of the Ring: Realms in Exile' version {online_version} was installed successfully!")
+            print(f"'Age of the Ring: Realms in Exile' version {online_version} was installed successfully!\n")
             return
 
         if online_version is None:
@@ -74,15 +89,15 @@ def main():
             return
 
         if local_version != online_version:
-            print(f"Your version of 'Age of the Ring: Realms in Exile' is {local_version}. Updating to version {online_version}...")
+            print(f"Your version of 'Age of the Ring: Realms in Exile' is {local_version}. Updating to version {online_version}...\n")
             download_file(VERSION_FILE)
             download_file(MOD_FILE)
             print("Updating files...")
             extract_with_progress(os.path.join(script_directory, MOD_FILE), script_directory)
             os.remove(os.path.join(script_directory, MOD_FILE))
-            print(f"'Age of the Ring: Realms in Exile' was updated to version {online_version} successfully!")
+            print(f"'Age of the Ring: Realms in Exile' was updated to version {online_version} successfully!\n")
         else:
-            print(f"You have the latest version of 'Age of the Ring: Realms in Exile' ({local_version}).")
+            print(f"You have the latest version of 'Age of the Ring: Realms in Exile' ({local_version}).\n")
 
     except Exception as e:
         print(f"Error: {e}")
