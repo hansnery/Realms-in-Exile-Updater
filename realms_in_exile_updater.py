@@ -3,6 +3,8 @@ import sys
 import requests
 from tqdm import tqdm
 import zipfile
+import winreg
+import win32com.client
 
 BASE_URL = "https://storage.googleapis.com/realms-in-exile/updater/"
 VERSION_FILE = "version.txt"
@@ -28,6 +30,46 @@ def download_file(filename):
             t.update(len(data))
             f.write(data)
     t.close()
+    
+def get_lotr_install_path():
+    key_path = r"SOFTWARE\WOW6432Node\Electronic Arts\Electronic Arts\The Lord of the Rings, The Rise of the Witch-king"
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_path) as key:
+            install_path, _ = winreg.QueryValueEx(key, "InstallPath")
+            return install_path
+    except FileNotFoundError:
+        print("The specified registry key or value was not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    return None
+
+def create_shortcut_with_flag(target_path, shortcut_path, flag, icon_path=None):
+    shell = win32com.client.Dispatch("WScript.Shell")
+    shortcut = shell.CreateShortCut(shortcut_path)
+    shortcut.TargetPath = target_path
+    shortcut.Arguments = flag
+    if icon_path:
+        shortcut.IconLocation = icon_path
+    shortcut.WindowStyle = 3  # 3 means "Maximized", 7 means "Minimized". 1 is "Normal"
+    shortcut.save()
+
+def create_shortcut_on_desktop():
+    # After the mod is installed/updated, create the shortcut
+    install_path = get_lotr_install_path()
+    if install_path:
+        print(f"Installation path of The Rise of the Witch-king is: {install_path}")
+        exe_path = os.path.join(install_path, "lotrbfme2ep1.exe")
+        if os.path.exists(exe_path):
+            desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+            local_version = get_local_version()
+            shortcut_path = os.path.join(desktop, f"Realms in Exile ({local_version}).lnk")
+            icon_path = os.path.join(script_directory, "aotr_fs.ico")
+            create_shortcut_with_flag(exe_path, shortcut_path, f"-mod \"{script_directory}\"", icon_path)
+            print(f"Shortcut created successfully!")
+        else:
+            print(f"'lotrbfme2ep1.exe' not found in {install_path}")
+    else:
+        print("Failed to retrieve the installation path.")
 
 def extract_with_progress(zip_path, extract_path):
     with zipfile.ZipFile(zip_path, 'r') as zf:
@@ -52,7 +94,9 @@ def get_online_version():
         return None
 
 def cleanup_and_retry():
-    os.remove(os.path.join(script_directory, MOD_FILE))
+    mod_file_path = os.path.join(script_directory, MOD_FILE)
+    if os.path.exists(mod_file_path):
+        os.remove(mod_file_path)
     choice = input("An error occurred. Would you like to start over? (Y/N): \n").upper()
     if choice == 'Y':
         main()
@@ -82,6 +126,7 @@ def main():
             extract_with_progress(os.path.join(script_directory, MOD_FILE), script_directory)
             os.remove(os.path.join(script_directory, MOD_FILE))
             print(f"'Age of the Ring: Realms in Exile' version {online_version} was installed successfully!\n")
+            create_shortcut_on_desktop()
             return
 
         if online_version is None:
@@ -89,15 +134,19 @@ def main():
             return
 
         if local_version != online_version:
-            print(f"Your version of 'Age of the Ring: Realms in Exile' is {local_version}. Updating to version {online_version}...\n")
+            print(f"Your version of 'Age of the Ring: Realms in Exile' is {local_version}.\nUpdating to version {online_version}...\n")
             download_file(VERSION_FILE)
             download_file(MOD_FILE)
             print("Updating files...")
             extract_with_progress(os.path.join(script_directory, MOD_FILE), script_directory)
             os.remove(os.path.join(script_directory, MOD_FILE))
             print(f"'Age of the Ring: Realms in Exile' was updated to version {online_version} successfully!\n")
+            create_shortcut_on_desktop()
         else:
             print(f"You have the latest version of 'Age of the Ring: Realms in Exile' ({local_version}).\n")
+            create_shortcut_on_desktop()
+            
+        input("Press Enter to exit...")
 
     except Exception as e:
         print(f"Error: {e}")
