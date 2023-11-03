@@ -1,0 +1,5 @@
+To convert the script to an executable run:
+
+pyinstaller --onefile --icon=aotr_fs.ico --name="Realms in Exile Updater" realms_in_exile_updater.py
+
+The executable will be created inside the "dist" folder. You can erase both "build" and "dist" folder after copying your executable somewhere else.
