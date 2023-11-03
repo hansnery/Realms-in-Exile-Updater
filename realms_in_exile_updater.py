@@ -71,6 +71,19 @@ def create_shortcut_on_desktop():
     else:
         print("Failed to retrieve the installation path.")
 
+def create_updater_shortcut_on_desktop():
+    desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+    updater_exe_path = sys.executable  # This gives the full path to the running executable
+    updater_executable_name = os.path.basename(updater_exe_path)  # Extracts the file name from the full path
+    updater_shortcut_path = os.path.join(desktop, f"{updater_executable_name}.lnk")
+    icon_path = os.path.join(script_directory, "aotr_fs.ico")
+    
+    if os.path.exists(updater_exe_path):
+        create_shortcut_with_flag(updater_exe_path, updater_shortcut_path, "", icon_path)
+        print(f"Updater shortcut created successfully on the desktop: {updater_shortcut_path}")
+    else:
+        print(f"Updater executable not found: {updater_exe_path}")
+
 def extract_with_progress(zip_path, extract_path):
     with zipfile.ZipFile(zip_path, 'r') as zf:
         # Get the total number of entries within the ZIP file
@@ -127,6 +140,8 @@ def main():
             os.remove(os.path.join(script_directory, MOD_FILE))
             print(f"'Age of the Ring: Realms in Exile' version {online_version} was installed successfully!\n")
             create_shortcut_on_desktop()
+            create_updater_shortcut_on_desktop()
+            input("Press Enter to exit...")
             return
 
         if online_version is None:
@@ -142,11 +157,13 @@ def main():
             os.remove(os.path.join(script_directory, MOD_FILE))
             print(f"'Age of the Ring: Realms in Exile' was updated to version {online_version} successfully!\n")
             create_shortcut_on_desktop()
+            create_updater_shortcut_on_desktop()
+            input("Press Enter to exit...")
         else:
             print(f"You have the latest version of 'Age of the Ring: Realms in Exile' ({local_version}).\n")
             create_shortcut_on_desktop()
-            
-        input("Press Enter to exit...")
+            create_updater_shortcut_on_desktop()
+            input("Press Enter to exit...")
 
     except Exception as e:
         print(f"Error: {e}")
