@@ -151,8 +151,10 @@ def create_desktop_shortcuts():
 def main():
     """Main function to orchestrate the mod update or installation process."""
     if not is_admin():
-        run_as_admin()
-        return  # Exit the script after requesting admin privileges
+        result = run_as_admin()
+        if result is False:
+            print("Failed to gain administrative privileges.")
+        return  # Exit the script if not admin or after requesting admin privileges
     
     local_version, online_version = get_versions()
     if online_version is None:
